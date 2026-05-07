@@ -10,7 +10,11 @@
 :root{--p:#673ab7;--bd:#e0e0e0}
 body{background:#f0ebf8;font-family:'Segoe UI',system-ui,sans-serif}
 .hdr{background:#fff;border-bottom:1px solid var(--bd);position:sticky;top:0;z-index:100;box-shadow:0 1px 4px rgba(0,0,0,.08)}
-.title-card{border-top:8px solid var(--p)!important;border-radius:8px!important}
+.title-card{border-radius:8px!important;overflow:hidden}
+.cover-area{height:160px;background:linear-gradient(135deg,#673ab7,#9c27b0);position:relative;cursor:pointer;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.7);font-size:.9rem}
+.cover-area img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.cover-area .cover-hint{position:relative;z-index:1;text-align:center}
+.title-body{padding:24px;border-top:8px solid var(--p)}
 #fTitle{font-size:1.5rem;font-weight:700;border:none;border-bottom:2px solid transparent;width:100%;outline:none;background:transparent;padding:2px 0;transition:border-color .2s}
 #fTitle:focus{border-bottom-color:var(--p)}
 #fDesc{border:none;border-bottom:1px solid transparent;width:100%;outline:none;background:transparent;resize:none;font-size:.95rem;padding:2px 0;transition:border-color .2s}
@@ -24,12 +28,20 @@ body{background:#f0ebf8;font-family:'Segoe UI',system-ui,sans-serif}
 .qcard.removing{animation:fadeOut .25s ease forwards;pointer-events:none}
 .q-title{border:none;border-bottom:1px solid var(--bd);border-radius:0;padding:5px 2px;font-size:1rem;outline:none;background:transparent;flex:1;min-width:0;transition:border-color .2s}
 .q-title:focus{border-bottom-color:var(--p)}
+.q-desc{border:none;border-bottom:1px solid transparent;border-radius:0;padding:3px 2px;font-size:.85rem;outline:none;background:transparent;width:100%;color:#666;transition:border-color .2s}
+.q-desc:focus{border-bottom-color:var(--p)}
 .q-type{border:1px solid var(--bd);border-radius:6px;padding:5px 8px;font-size:.85rem;background:#fff;flex-shrink:0}
 .q-type:focus{outline:none;border-color:var(--p)}
 .opt-wrap{padding-left:8px}
 .opt-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
-.opt-input{border:none;border-bottom:1px solid var(--bd);border-radius:0;padding:3px 2px;flex:1;outline:none;background:transparent;font-size:.9rem;min-width:0;cursor:text}
+.opt-input{border:none;border-bottom:1px solid var(--bd);border-radius:0;padding:3px 2px;flex:1;outline:none;background:transparent;font-size:.9rem;min-width:0}
 .opt-input:focus{border-bottom-color:var(--p)}
+.img-opt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px}
+.img-opt-item{border:2px solid var(--bd);border-radius:8px;padding:8px;text-align:center;cursor:pointer;position:relative}
+.img-opt-item img{width:100%;height:80px;object-fit:cover;border-radius:4px;margin-bottom:4px}
+.img-opt-item input[type=text]{border:none;border-bottom:1px solid var(--bd);width:100%;outline:none;font-size:.8rem;text-align:center;background:transparent}
+.scale-preview{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.scale-preview .scale-num{width:36px;height:36px;border-radius:50%;border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:.85rem;color:#555}
 .q-toolbar{border-top:1px solid var(--bd);display:none;padding:8px 12px;align-items:center;justify-content:flex-end;gap:12px}
 .qcard.active .q-toolbar{display:flex}
 .add-btn{width:48px;height:48px;border-radius:50%;background:#fff;border:1px solid var(--bd);box-shadow:0 2px 8px rgba(0,0,0,.12);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:box-shadow .2s,color .2s;color:#666;font-size:1.3rem}
@@ -38,41 +50,52 @@ body{background:#f0ebf8;font-family:'Segoe UI',system-ui,sans-serif}
 </style>
 </head>
 <body>
-
 <header class="hdr py-2 px-3">
   <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
     <div class="d-flex align-items-center gap-2">
-      <a href="dashboard.html" class="btn btn-sm btn-outline-secondary">
-        <i class="bi bi-grid-3x3-gap"></i> 後台
-      </a>
+      <a href="dashboard.html" class="btn btn-sm btn-outline-secondary"><i class="bi bi-grid-3x3-gap"></i> 後台</a>
       <span class="fw-bold" style="color:var(--p)">FormBuilder</span>
     </div>
     <div class="d-flex gap-2">
-      <a id="resultsBtn" href="results.html" class="btn btn-sm btn-outline-secondary" target="_blank">
-        <i class="bi bi-bar-chart-line"></i> 統計
-      </a>
-      <button class="btn btn-sm btn-outline-secondary" onclick="saveDraft()">
-        <i class="bi bi-floppy"></i> 儲存草稿
-      </button>
-      <button class="btn btn-sm text-white" style="background:var(--p)" onclick="publish()">
-        <i class="bi bi-send"></i> 發佈 &amp; 分享
-      </button>
+      <a id="resultsBtn" href="results.html" class="btn btn-sm btn-outline-secondary" target="_blank"><i class="bi bi-bar-chart-line"></i> 統計</a>
+      <button class="btn btn-sm btn-outline-secondary" onclick="saveDraft()"><i class="bi bi-floppy"></i> 儲存草稿</button>
+      <button class="btn btn-sm text-white" style="background:var(--p)" onclick="publish()"><i class="bi bi-send"></i> 發佈 &amp; 分享</button>
     </div>
   </div>
 </header>
 
 <div class="container py-4" style="max-width:700px">
+  <!-- 標題卡片（含封面圖） -->
   <div class="card shadow-sm mb-3 title-card">
-    <div class="card-body p-4">
+    <div class="cover-area" onclick="document.getElementById('coverInput').click()">
+      <img id="coverImg" src="" style="display:none">
+      <div class="cover-hint"><i class="bi bi-image fs-3 d-block mb-1"></i>點擊上傳封面圖片</div>
+    </div>
+    <input type="file" id="coverInput" accept="image/*" class="d-none" onchange="loadCover(this)">
+    <div class="title-body">
       <input id="fTitle" type="text" placeholder="表單標題" value="未命名表單" autocomplete="off">
-      <div class="mt-3">
-        <textarea id="fDesc" placeholder="表單說明（選填）" rows="2"></textarea>
-      </div>
+      <div class="mt-2"><textarea id="fDesc" placeholder="表單說明（選填）" rows="2"></textarea></div>
     </div>
   </div>
+
   <div id="qList"></div>
-  <div class="d-flex justify-content-center mt-3">
-    <div class="add-btn" onclick="addQ()" title="新增題目"><i class="bi bi-plus-lg"></i></div>
+
+  <!-- 新增題目工具列 -->
+  <div class="card shadow-sm mb-3 p-3">
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <span class="text-muted small me-1">新增題目：</span>
+      <button class="btn btn-sm btn-outline-secondary" onclick="addQ('short_text')">📝 單行</button>
+      <button class="btn btn-sm btn-outline-secondary" onclick="addQ('paragraph')">📄 多行</button>
+      <button class="btn btn-sm btn-outline-secondary" onclick="addQ('name')">👤 姓名</button>
+      <button class="btn btn-sm btn-outline-secondary" onclick="addQ('email')">✉️ Email</button>
+      <button class="btn btn-sm btn-outline-secondary" onclick="addQ('radio')">🔘 單選</button>
+      <button class="btn btn-sm btn-outline-secondary" onclick="addQ('checkbox')">☑️ 多選</button>
+      <button class="btn btn-sm btn-outline-secondary" onclick="addQ('dropdown')">🔽 下拉</button>
+      <button class="btn btn-sm btn-outline-secondary" onclick="addQ('scale')">📊 線性刻度</button>
+      <button class="btn btn-sm btn-outline-secondary" onclick="addQ('image_choice')">🖼️ 圖片選擇</button>
+      <button class="btn btn-sm btn-outline-secondary" onclick="addQ('date')">📅 日期</button>
+      <button class="btn btn-sm btn-outline-secondary" onclick="addQ('time')">🕐 時間</button>
+    </div>
   </div>
 </div>
 
@@ -85,7 +108,6 @@ body{background:#f0ebf8;font-family:'Segoe UI',system-ui,sans-serif}
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body text-center">
-        <p class="text-muted mb-3">將以下連結分享給填答者</p>
         <div class="input-group mb-3">
           <input type="text" id="shareUrl" class="form-control" readonly>
           <button class="btn btn-outline-secondary" onclick="copyUrl()"><i class="bi bi-clipboard"></i> 複製</button>
@@ -94,16 +116,13 @@ body{background:#f0ebf8;font-family:'Segoe UI',system-ui,sans-serif}
         <small class="text-muted">掃描 QR Code 直接填答</small>
       </div>
       <div class="modal-footer">
-        <a id="fillLink" href="fill.html" target="_blank" class="btn btn-sm text-white" style="background:var(--p)">
-          <i class="bi bi-pencil-square"></i> 開啟填答頁
-        </a>
+        <a id="fillLink" href="fill.html" target="_blank" class="btn btn-sm text-white" style="background:var(--p)"><i class="bi bi-pencil-square"></i> 開啟填答頁</a>
         <button class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">關閉</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Toast -->
 <div class="position-fixed bottom-0 end-0 p-3" style="z-index:9999">
   <div id="toast" class="toast text-white border-0">
     <div class="d-flex">
@@ -117,31 +136,38 @@ body{background:#f0ebf8;font-family:'Segoe UI',system-ui,sans-serif}
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <script>
 let qCount = 0;
-// 從 URL 取得 formId（編輯現有表單）或產生新 ID
-const urlId  = new URLSearchParams(location.search).get('id');
-let   formId = urlId || null;
+const urlId = new URLSearchParams(location.search).get('id');
+let formId  = urlId || null;
 
-// ── 新增題目 ─────────────────────────────────────────────
-function addQ(preset = {}) {
-  const id = ++qCount;
+// ── 封面圖 ────────────────────────────────────────────────
+function loadCover(input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = document.getElementById('coverImg');
+    img.src = e.target.result; img.style.display = '';
+    document.querySelector('.cover-hint').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── 新增題目 ──────────────────────────────────────────────
+function addQ(type = 'short_text', preset = {}) {
+  const id   = ++qCount;
   const card = document.createElement('div');
-  card.className = 'card shadow-sm mb-3 qcard';
+  card.className   = 'card shadow-sm mb-3 qcard';
   card.dataset.qid = id;
   card.innerHTML = `
     <div class="card-body p-3">
-      <div class="d-flex align-items-center gap-2 mb-3">
-        <i class="bi bi-grip-vertical text-secondary" style="cursor:grab;flex-shrink:0"></i>
-        <input type="text" class="q-title" placeholder="輸入題目" value="${esc(preset.title||'')}">
-        <select class="q-type" onchange="changeType(this)">
-          <option value="short_text">📝 單行文字</option>
-          <option value="paragraph">📄 多行文字</option>
-          <option value="radio">🔘 單選按鈕</option>
-          <option value="checkbox">☑️ 核取方塊</option>
-          <option value="dropdown">🔽 下拉選單</option>
-          <option value="date">📅 日期</option>
-        </select>
+      <div class="d-flex align-items-start gap-2 mb-2">
+        <i class="bi bi-grip-vertical text-secondary mt-1" style="cursor:grab;flex-shrink:0"></i>
+        <div class="flex-grow-1">
+          <input type="text" class="q-title w-100 mb-1" placeholder="題目" value="${esc(preset.title||'')}">
+          <input type="text" class="q-desc w-100" placeholder="題目說明（選填）" value="${esc(preset.desc||'')}">
+        </div>
+        <span class="badge rounded-pill text-bg-light small mt-1">${typeLabel(type)}</span>
       </div>
-      <div class="q-body ms-3"></div>
+      <div class="q-body ms-4 mt-2"></div>
       <div class="q-toolbar">
         <div class="form-check form-switch mb-0">
           <input class="form-check-input q-req" type="checkbox" role="switch" ${preset.is_required?'checked':''}>
@@ -151,17 +177,14 @@ function addQ(preset = {}) {
         <button class="btn btn-sm btn-link text-danger p-0" onclick="removeQ(this)"><i class="bi bi-trash3"></i></button>
       </div>
     </div>`;
-
+  card.dataset.type = type;
   card.addEventListener('mousedown', e => {
     if (!e.target.closest('input,textarea,select,button,a')) setActive(card);
   });
-
   document.getElementById('qList').appendChild(card);
-  const sel = card.querySelector('.q-type');
-  if (preset.type) sel.value = preset.type;
-  renderBody(card, preset.options || null);
+  renderBody(card, preset);
   setActive(card);
-  if (!preset.title) card.querySelector('.q-title').focus();
+  card.querySelector('.q-title').focus();
 }
 
 function setActive(card) {
@@ -169,22 +192,57 @@ function setActive(card) {
   card.classList.add('active');
 }
 
-function changeType(sel) { renderBody(sel.closest('.qcard'), null); }
-
-function renderBody(card, existingOpts) {
-  const type = card.querySelector('.q-type').value;
+// ── 渲染題目主體 ──────────────────────────────────────────
+function renderBody(card, preset = {}) {
+  const type = card.dataset.type;
   const box  = card.querySelector('.q-body');
-  if (type === 'short_text') { box.innerHTML = `<input class="form-control form-control-sm" placeholder="簡短答案" disabled>`; return; }
-  if (type === 'paragraph')  { box.innerHTML = `<textarea class="form-control form-control-sm" rows="2" placeholder="長答案" disabled></textarea>`; return; }
-  if (type === 'date')       { box.innerHTML = `<input type="date" class="form-control form-control-sm" style="max-width:180px" disabled>`; return; }
 
-  const opts = existingOpts?.length ? existingOpts : ['選項 1'];
+  const staticMap = {
+    short_text: `<input class="form-control form-control-sm" placeholder="簡短答案" disabled>`,
+    paragraph:  `<textarea class="form-control form-control-sm" rows="2" placeholder="長答案" disabled></textarea>`,
+    name:       `<div class="row g-2"><div class="col"><input class="form-control form-control-sm" placeholder="姓" disabled></div><div class="col"><input class="form-control form-control-sm" placeholder="名" disabled></div></div>`,
+    email:      `<input type="email" class="form-control form-control-sm" placeholder="example@email.com" disabled>`,
+    date:       `<input type="date" class="form-control form-control-sm" style="max-width:180px" disabled>`,
+    time:       `<input type="time" class="form-control form-control-sm" style="max-width:150px" disabled>`,
+  };
+  if (staticMap[type]) { box.innerHTML = staticMap[type]; return; }
+
+  if (type === 'scale') {
+    const min = preset.scale_min ?? 1;
+    const max = preset.scale_max ?? 5;
+    const minLabel = preset.scale_min_label || '';
+    const maxLabel = preset.scale_max_label || '';
+    box.innerHTML = `
+      <div class="d-flex gap-2 align-items-center mb-2 flex-wrap">
+        <select class="form-select form-select-sm s-min" style="width:80px" onchange="updateScale(this)">
+          ${[0,1].map(v=>`<option ${min==v?'selected':''}>${v}</option>`).join('')}
+        </select>
+        <span class="text-muted small">到</span>
+        <select class="form-select form-select-sm s-max" style="width:80px" onchange="updateScale(this)">
+          ${[2,3,4,5,6,7,8,9,10].map(v=>`<option ${max==v?'selected':''}>${v}</option>`).join('')}
+        </select>
+      </div>
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <input type="text" class="form-control form-control-sm s-min-label" placeholder="最小值標籤（選填）" value="${esc(minLabel)}" style="max-width:160px">
+        <input type="text" class="form-control form-control-sm s-max-label" placeholder="最大值標籤（選填）" value="${esc(maxLabel)}" style="max-width:160px">
+      </div>
+      <div class="scale-preview">${buildScaleNums(min, max)}</div>`;
+    return;
+  }
+
+  if (type === 'image_choice') {
+    const opts = preset.options?.length ? preset.options : [{label:'選項 1',img:''}];
+    box.innerHTML = `<div class="img-opt-grid">${opts.map((o,i)=>imgOptHTML(o,i)).join('')}</div>
+      <button class="btn btn-sm btn-link p-0 mt-2 add-opt-btn" style="color:var(--p)" onclick="addImgOpt(this)"><i class="bi bi-plus"></i> 新增圖片選項</button>`;
+    return;
+  }
+
+  // radio / checkbox / dropdown
+  const opts = preset.options?.length ? preset.options : ['選項 1'];
   box.innerHTML = '';
   const wrap = document.createElement('div');
-  wrap.className = 'opt-wrap';
-  wrap.dataset.type = type;
+  wrap.className = 'opt-wrap'; wrap.dataset.type = type;
   opts.forEach((o, i) => appendOptRow(wrap, type, o, i + 1));
-
   const addBtn = document.createElement('button');
   addBtn.className = 'btn btn-sm btn-link p-0 mt-1 add-opt-btn';
   addBtn.style.color = 'var(--p)';
@@ -193,11 +251,44 @@ function renderBody(card, existingOpts) {
   addBtn.onclick = () => {
     const n = wrap.querySelectorAll('.opt-row').length + 1;
     appendOptRow(wrap, type, '', n);
-    const rows = wrap.querySelectorAll('.opt-row');
-    rows[rows.length - 1]?.querySelector('.opt-input')?.focus();
+    wrap.querySelectorAll('.opt-row')[n-1]?.querySelector('.opt-input')?.focus();
   };
   wrap.appendChild(addBtn);
   box.appendChild(wrap);
+}
+
+function buildScaleNums(min, max) {
+  let html = '';
+  for (let i = +min; i <= +max; i++) html += `<div class="scale-num">${i}</div>`;
+  return html;
+}
+
+function updateScale(sel) {
+  const box = sel.closest('.q-body');
+  const min = box.querySelector('.s-min').value;
+  const max = box.querySelector('.s-max').value;
+  box.querySelector('.scale-preview').innerHTML = buildScaleNums(min, max);
+}
+
+function imgOptHTML(opt, i) {
+  return `<div class="img-opt-item">
+    <img src="${opt.img||'https://via.placeholder.com/120x80?text=圖片'}" onclick="this.parentElement.querySelector('input[type=file]').click()">
+    <input type="file" accept="image/*" class="d-none" onchange="loadImgOpt(this)">
+    <input type="text" value="${esc(opt.label||'')}" placeholder="選項標籤">
+    <button class="btn btn-sm btn-link text-danger p-0 d-block w-100" onclick="this.closest('.img-opt-item').remove()"><i class="bi bi-x"></i></button>
+  </div>`;
+}
+
+function loadImgOpt(input) {
+  const reader = new FileReader();
+  reader.onload = e => input.previousElementSibling.src = e.target.result;
+  reader.readAsDataURL(input.files[0]);
+}
+
+function addImgOpt(btn) {
+  const grid = btn.previousElementSibling;
+  const i = grid.children.length;
+  grid.insertAdjacentHTML('beforeend', imgOptHTML({label:'', img:''}, i));
 }
 
 function appendOptRow(wrap, type, value, index) {
@@ -234,44 +325,55 @@ function removeQ(btn) {
 
 // ── 收集資料 ──────────────────────────────────────────────
 function collect(status = 'draft') {
+  const questions = [...document.querySelectorAll('.qcard')].map((card, i) => {
+    const type = card.dataset.type;
+    const q = {
+      id: i + 1, sort_order: i, type,
+      title:       card.querySelector('.q-title').value.trim(),
+      desc:        card.querySelector('.q-desc')?.value.trim() || '',
+      is_required: card.querySelector('.q-req').checked,
+      options: null,
+    };
+    if (['radio','checkbox','dropdown'].includes(type)) {
+      q.options = [...card.querySelectorAll('.opt-input')].map(x => x.value.trim()).filter(Boolean);
+    }
+    if (type === 'image_choice') {
+      q.options = [...card.querySelectorAll('.img-opt-item')].map(el => ({
+        label: el.querySelector('input[type=text]').value.trim(),
+        img:   el.querySelector('img').src,
+      }));
+    }
+    if (type === 'scale') {
+      q.scale_min = +card.querySelector('.s-min').value;
+      q.scale_max = +card.querySelector('.s-max').value;
+      q.scale_min_label = card.querySelector('.s-min-label').value.trim();
+      q.scale_max_label = card.querySelector('.s-max-label').value.trim();
+    }
+    return q;
+  });
+
   return {
     id:          formId || String(Date.now()),
     title:       document.getElementById('fTitle').value.trim() || '未命名表單',
     description: document.getElementById('fDesc').value.trim(),
-    status,
-    savedAt:     new Date().toISOString(),
-    questions:   [...document.querySelectorAll('.qcard')].map((card, i) => {
-      const type = card.querySelector('.q-type').value;
-      const opts = [...card.querySelectorAll('.opt-input')].map(x => x.value.trim()).filter(Boolean);
-      return { id: i+1, sort_order: i, type,
-               title: card.querySelector('.q-title').value.trim(),
-               is_required: card.querySelector('.q-req').checked,
-               options: opts.length ? opts : null };
-    }),
+    cover:       document.getElementById('coverImg').src || '',
+    status, savedAt: new Date().toISOString(), questions,
   };
 }
 
-// ── 儲存到 fb_forms ───────────────────────────────────────
 function persistForm(data) {
   formId = data.id;
   const forms = JSON.parse(localStorage.getItem('fb_forms') || '{}');
   forms[formId] = data;
   localStorage.setItem('fb_forms', JSON.stringify(forms));
-  // 更新 header 統計連結
   document.getElementById('resultsBtn').href = `results.html?id=${formId}`;
 }
 
-function saveDraft() {
-  const data = collect('draft');
-  persistForm(data);
-  showToast('✅ 草稿已儲存', 'success');
-}
+function saveDraft() { persistForm(collect('draft')); showToast('✅ 草稿已儲存', 'success'); }
 
 function publish() {
-  const data = collect('published');
-  persistForm(data);
-
-  const base = location.origin + location.pathname.replace('index.html', '');
+  const data = collect('published'); persistForm(data);
+  const base = location.origin + location.pathname.replace('index.html','');
   const url  = `${base}fill.html?id=${formId}`;
   document.getElementById('shareUrl').value = url;
   document.getElementById('fillLink').href  = url;
@@ -293,11 +395,16 @@ function showToast(msg, type = 'success') {
   bootstrap.Toast.getOrCreateInstance(el, { delay: 3000 }).show();
 }
 
+function typeLabel(t) {
+  return {short_text:'單行',paragraph:'多行',name:'姓名',email:'Email',radio:'單選',
+          checkbox:'多選',dropdown:'下拉',scale:'線性刻度',image_choice:'圖片選擇',date:'日期',time:'時間'}[t]||t;
+}
+
 function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// ── 初始化：載入指定表單或新建 ────────────────────────────
+// ── 初始化 ────────────────────────────────────────────────
 (function init() {
   if (urlId) {
     const forms = JSON.parse(localStorage.getItem('fb_forms') || '{}');
@@ -306,13 +413,18 @@ function esc(s) {
       formId = urlId;
       document.getElementById('fTitle').value = d.title || '';
       document.getElementById('fDesc').value  = d.description || '';
+      if (d.cover) {
+        document.getElementById('coverImg').src = d.cover;
+        document.getElementById('coverImg').style.display = '';
+        document.querySelector('.cover-hint').style.display = 'none';
+      }
       document.getElementById('resultsBtn').href = `results.html?id=${formId}`;
-      (d.questions || []).forEach(q => addQ(q));
-      if (!d.questions?.length) addQ();
+      (d.questions || []).forEach(q => addQ(q.type, q));
+      if (!d.questions?.length) addQ('short_text');
       return;
     }
   }
-  addQ();
+  addQ('short_text');
 })();
 </script>
 </body>

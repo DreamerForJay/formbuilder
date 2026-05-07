@@ -9,12 +9,25 @@
 <style>
 :root{--p:#673ab7}
 body{background:#f0ebf8;font-family:'Segoe UI',system-ui,sans-serif}
+.cover-img{width:100%;height:180px;object-fit:cover;border-radius:8px 8px 0 0}
 .title-card{border-top:8px solid var(--p)!important;border-radius:8px!important}
 .q-card{border-radius:8px!important;border:1px solid #e0e0e0!important;transition:box-shadow .2s}
 .q-card:focus-within{box-shadow:0 4px 16px rgba(103,58,183,.15);border-color:#b39ddb!important}
 .req-star{color:#d32f2f;margin-left:3px}
+.q-desc-text{color:#666;font-size:.85rem;margin-bottom:8px}
 .submit-btn{background:var(--p);border:none;padding:10px 40px;font-size:1rem;border-radius:6px}
 .submit-btn:hover{background:#512da8}
+/* 線性刻度 */
+.scale-wrap{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.scale-btn{width:40px;height:40px;border-radius:50%;border:2px solid #e0e0e0;background:#fff;cursor:pointer;font-size:.9rem;transition:all .2s;flex-shrink:0}
+.scale-btn:hover{border-color:var(--p);color:var(--p)}
+.scale-btn.selected{background:var(--p);border-color:var(--p);color:#fff}
+/* 圖片選擇 */
+.img-choice-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.img-choice-item{border:2px solid #e0e0e0;border-radius:8px;overflow:hidden;cursor:pointer;transition:border-color .2s}
+.img-choice-item.selected{border-color:var(--p);box-shadow:0 0 0 2px rgba(103,58,183,.3)}
+.img-choice-item img{width:100%;height:90px;object-fit:cover}
+.img-choice-item .label{padding:6px;font-size:.8rem;text-align:center}
 </style>
 </head>
 <body>
@@ -26,7 +39,8 @@ body{background:#f0ebf8;font-family:'Segoe UI',system-ui,sans-serif}
   </div>
 
   <div id="formWrap" style="display:none">
-    <div class="card shadow-sm mb-3 title-card">
+    <div class="card shadow-sm mb-3 title-card" id="titleCard">
+      <img id="coverImg" class="cover-img" style="display:none">
       <div class="card-body p-4">
         <h2 id="fTitle" class="mb-1 fw-bold"></h2>
         <p id="fDesc" class="text-muted mb-0"></p>
@@ -34,9 +48,7 @@ body{background:#f0ebf8;font-family:'Segoe UI',system-ui,sans-serif}
     </div>
     <div id="qList"></div>
     <div class="mt-3 d-flex gap-2 align-items-center">
-      <button class="btn text-white submit-btn" onclick="submitForm()">
-        <i class="bi bi-send"></i> 提交
-      </button>
+      <button class="btn text-white submit-btn" onclick="submitForm()"><i class="bi bi-send"></i> 提交</button>
       <span id="errMsg" class="text-danger small"></span>
     </div>
   </div>
@@ -50,14 +62,13 @@ body{background:#f0ebf8;font-family:'Segoe UI',system-ui,sans-serif}
       <a id="resultsLink" href="results.html" class="btn btn-sm text-white" style="background:var(--p)">查看統計</a>
     </div>
   </div>
-
 </div>
+
 <script>
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbxAa2dLS3FxLfgf1Uk30sLXBZMys_1BxBzCjLeo_OurUnTJVOQrjj4Wnfnm9FInrl38qQ/exec';
-
-const formId = new URLSearchParams(location.search).get('id');
-const forms  = JSON.parse(localStorage.getItem('fb_forms') || '{}');
-const form   = formId ? forms[formId] : null;
+const formId  = new URLSearchParams(location.search).get('id');
+const forms   = JSON.parse(localStorage.getItem('fb_forms') || '{}');
+const form    = formId ? forms[formId] : null;
 
 if (!form || form.status !== 'published') {
   document.getElementById('noForm').classList.remove('d-none');
@@ -68,6 +79,12 @@ if (!form || form.status !== 'published') {
   document.getElementById('formWrap').style.display = '';
   document.getElementById('resultsLink').href = `results.html?id=${formId}`;
 
+  if (form.cover) {
+    const ci = document.getElementById('coverImg');
+    ci.src = form.cover; ci.style.display = '';
+    document.getElementById('titleCard').style.borderTop = 'none';
+  }
+
   (form.questions || []).forEach(q => {
     const card = document.createElement('div');
     card.className = 'card shadow-sm mb-3 q-card';
@@ -75,31 +92,83 @@ if (!form || form.status !== 'published') {
     card.dataset.type = q.type;
     card.dataset.req  = q.is_required ? '1' : '0';
 
-    const label = `<label class="fw-semibold mb-2 d-block">${esc(q.title)}${q.is_required?'<span class="req-star">*</span>':''}</label>`;
+    const reqStar = q.is_required ? '<span class="req-star">*</span>' : '';
+    const descHtml = q.desc ? `<p class="q-desc-text">${esc(q.desc)}</p>` : '';
     let input = '';
 
-    if (q.type === 'short_text') {
-      input = `<input type="text" class="form-control q-ans" placeholder="您的答案">`;
-    } else if (q.type === 'paragraph') {
-      input = `<textarea class="form-control q-ans" rows="3" placeholder="您的答案"></textarea>`;
-    } else if (q.type === 'date') {
-      input = `<input type="date" class="form-control q-ans" style="max-width:200px">`;
-    } else if (q.type === 'dropdown') {
-      input = `<select class="form-select q-ans"><option value="">— 請選擇 —</option>${
-        (q.options||[]).map(o=>`<option>${esc(o)}</option>`).join('')}</select>`;
-    } else {
-      const itype = q.type === 'checkbox' ? 'checkbox' : 'radio';
-      const name  = `q_${q.id}`;
-      input = (q.options||[]).map((o,i)=>`
-        <div class="form-check">
-          <input class="form-check-input q-ans" type="${itype}" name="${name}" value="${esc(o)}" id="${name}_${i}">
-          <label class="form-check-label" for="${name}_${i}">${esc(o)}</label>
-        </div>`).join('');
+    switch (q.type) {
+      case 'short_text':
+        input = `<input type="text" class="form-control q-ans" placeholder="您的答案">`; break;
+      case 'paragraph':
+        input = `<textarea class="form-control q-ans" rows="3" placeholder="您的答案"></textarea>`; break;
+      case 'name':
+        input = `<div class="row g-2">
+          <div class="col"><input type="text" class="form-control q-ans-last" placeholder="姓"></div>
+          <div class="col"><input type="text" class="form-control q-ans-first" placeholder="名"></div>
+        </div>`; break;
+      case 'email':
+        input = `<input type="email" class="form-control q-ans" placeholder="example@email.com">`; break;
+      case 'date':
+        input = `<input type="date" class="form-control q-ans" style="max-width:200px">`; break;
+      case 'time':
+        input = `<input type="time" class="form-control q-ans" style="max-width:160px">`; break;
+      case 'dropdown':
+        input = `<select class="form-select q-ans"><option value="">— 請選擇 —</option>${
+          (q.options||[]).map(o=>`<option>${esc(o)}</option>`).join('')}</select>`; break;
+      case 'radio':
+        input = (q.options||[]).map((o,i)=>`
+          <div class="form-check">
+            <input class="form-check-input q-ans" type="radio" name="q_${q.id}" value="${esc(o)}" id="q${q.id}_${i}">
+            <label class="form-check-label" for="q${q.id}_${i}">${esc(o)}</label>
+          </div>`).join(''); break;
+      case 'checkbox':
+        input = (q.options||[]).map((o,i)=>`
+          <div class="form-check">
+            <input class="form-check-input q-ans" type="checkbox" name="q_${q.id}" value="${esc(o)}" id="q${q.id}_${i}">
+            <label class="form-check-label" for="q${q.id}_${i}">${esc(o)}</label>
+          </div>`).join(''); break;
+      case 'scale': {
+        const min = q.scale_min ?? 1, max = q.scale_max ?? 5;
+        let btns = '';
+        for (let v = min; v <= max; v++) btns += `<button type="button" class="scale-btn" data-val="${v}" onclick="selectScale(this)">${v}</button>`;
+        input = `<div class="scale-wrap">
+          ${q.scale_min_label ? `<span class="text-muted small">${esc(q.scale_min_label)}</span>` : ''}
+          ${btns}
+          ${q.scale_max_label ? `<span class="text-muted small">${esc(q.scale_max_label)}</span>` : ''}
+        </div>
+        <input type="hidden" class="q-ans">`; break;
+      }
+      case 'image_choice': {
+        const itype = 'radio'; // 預設單選圖片
+        input = `<div class="img-choice-grid">${(q.options||[]).map((o,i)=>`
+          <div class="img-choice-item" onclick="selectImgChoice(this,'q_${q.id}','${esc(o.label||'')}')">
+            <img src="${o.img||'https://via.placeholder.com/130x90?text=圖片'}" alt="${esc(o.label||'')}">
+            <div class="label">${esc(o.label||'')}</div>
+          </div>`).join('')}
+        </div>
+        <input type="hidden" class="q-ans">`; break;
+      }
     }
 
-    card.innerHTML = `<div class="card-body p-3">${label}${input}</div>`;
+    card.innerHTML = `<div class="card-body p-3">
+      <label class="fw-semibold mb-1 d-block">${esc(q.title)}${reqStar}</label>
+      ${descHtml}${input}
+    </div>`;
     document.getElementById('qList').appendChild(card);
   });
+}
+
+function selectScale(btn) {
+  const wrap = btn.closest('.scale-wrap');
+  wrap.querySelectorAll('.scale-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  btn.closest('.card-body').querySelector('.q-ans').value = btn.dataset.val;
+}
+
+function selectImgChoice(item, name, label) {
+  item.closest('.img-choice-grid').querySelectorAll('.img-choice-item').forEach(i => i.classList.remove('selected'));
+  item.classList.add('selected');
+  item.closest('.card-body').querySelector('.q-ans').value = label;
 }
 
 function submitForm() {
@@ -109,16 +178,19 @@ function submitForm() {
     card.style.borderColor = '';
     if (card.dataset.req !== '1') return;
     const type = card.dataset.type;
-    const answered = (type === 'radio' || type === 'checkbox')
-      ? !!card.querySelector('.q-ans:checked')
-      : !!(card.querySelector('.q-ans')?.value.trim());
+    let answered = false;
+    if (type === 'radio' || type === 'image_choice' || type === 'scale') {
+      answered = !!(card.querySelector('.q-ans')?.value);
+    } else if (type === 'checkbox') {
+      answered = !!card.querySelector('.q-ans:checked');
+    } else if (type === 'name') {
+      answered = !!(card.querySelector('.q-ans-last')?.value.trim());
+    } else {
+      answered = !!(card.querySelector('.q-ans')?.value.trim());
+    }
     if (!answered) { card.style.borderColor = '#d32f2f'; valid = false; }
   });
-  if (!valid) {
-    document.getElementById('errMsg').textContent = '請填寫所有必填題目';
-    window.scrollTo({top:0,behavior:'smooth'});
-    return;
-  }
+  if (!valid) { document.getElementById('errMsg').textContent = '請填寫所有必填題目'; window.scrollTo({top:0,behavior:'smooth'}); return; }
 
   const answers = {};
   document.querySelectorAll('.q-card').forEach(card => {
@@ -126,40 +198,31 @@ function submitForm() {
     const type = card.dataset.type;
     if (type === 'checkbox') {
       answers[qid] = [...card.querySelectorAll('.q-ans:checked')].map(x => x.value);
-    } else if (type === 'radio') {
-      const el = card.querySelector('.q-ans:checked');
-      answers[qid] = el ? [el.value] : [];
+    } else if (type === 'name') {
+      const last  = card.querySelector('.q-ans-last')?.value.trim() || '';
+      const first = card.querySelector('.q-ans-first')?.value.trim() || '';
+      answers[qid] = [`${last} ${first}`.trim()];
     } else {
       answers[qid] = [card.querySelector('.q-ans')?.value.trim() || ''];
     }
   });
 
   const entry = { submittedAt: new Date().toISOString(), answers };
+  const key   = `fb_responses_${formId}`;
+  const list  = JSON.parse(localStorage.getItem(key) || '[]');
+  list.push(entry); localStorage.setItem(key, JSON.stringify(list));
 
-  // 1. 存 localStorage（離線備份）
-  const key  = `fb_responses_${formId}`;
-  const list = JSON.parse(localStorage.getItem(key) || '[]');
-  list.push(entry);
-  localStorage.setItem(key, JSON.stringify(list));
+  const btn = document.querySelector('.submit-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> 提交中…';
 
-  // 2. 同步到 Google Sheets（用 GET + 參數，避開 GAS POST 重導向問題）
-  const gasUrl = GAS_URL || localStorage.getItem('fb_gas_url');
-  if (gasUrl) {
-    const btn = document.querySelector('.submit-btn');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> 提交中…';
-    const payload = encodeURIComponent(JSON.stringify({ formId, form, answers }));
-    fetch(`${gasUrl}?action=submit&payload=${payload}`)
+  const payload = encodeURIComponent(JSON.stringify({ formId, form, answers }));
+  fetch(`${GAS_URL}?action=submit&payload=${payload}`)
     .catch(() => {})
     .finally(() => {
       document.getElementById('formWrap').style.display   = 'none';
       document.getElementById('successCard').style.display = '';
     });
-    return;
-  }
-
-  document.getElementById('formWrap').style.display   = 'none';
-  document.getElementById('successCard').style.display = '';
 }
 
 function esc(s) {

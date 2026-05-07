@@ -16,23 +16,20 @@ body{background:#f0ebf8;font-family:'Segoe UI',system-ui,sans-serif}
 .badge-count{background:var(--p);color:#fff;border-radius:20px;padding:2px 10px;font-size:.8rem}
 .tab-btn{cursor:pointer;padding:6px 16px;border-radius:20px;font-size:.85rem;border:1px solid #e0e0e0;background:#fff;transition:all .2s}
 .tab-btn.active{background:var(--p);color:#fff;border-color:var(--p)}
+/* 線性刻度統計 */
+.scale-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.scale-circle{width:32px;height:32px;border-radius:50%;background:var(--p);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.8rem;flex-shrink:0}
 </style>
 </head>
 <body>
 <div class="container py-4" style="max-width:720px">
-
   <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
-    <a href="dashboard.html" class="btn btn-sm btn-outline-secondary">
-      <i class="bi bi-grid-3x3-gap"></i> 後台
-    </a>
-    <a id="fillBtn" href="fill.html" target="_blank" class="btn btn-sm text-white" style="background:var(--p)">
-      <i class="bi bi-pencil-square"></i> 前往填答
-    </a>
+    <a href="dashboard.html" class="btn btn-sm btn-outline-secondary"><i class="bi bi-grid-3x3-gap"></i> 後台</a>
+    <a id="fillBtn" href="fill.html" target="_blank" class="btn btn-sm text-white" style="background:var(--p)"><i class="bi bi-pencil-square"></i> 前往填答</a>
   </div>
 
   <div id="noData" class="alert alert-warning d-none">
-    <i class="bi bi-exclamation-triangle"></i> 尚無填答資料，或找不到表單。
-    請先<a id="fillLink" href="fill.html" class="alert-link">填答表單</a>後再查看統計。
+    <i class="bi bi-exclamation-triangle"></i> 尚無填答資料。請先<a id="fillLink" href="fill.html" class="alert-link">填答表單</a>後再查看統計。
   </div>
 
   <div id="titleCard" class="card shadow-sm mb-3 title-card" style="display:none">
@@ -52,7 +49,6 @@ body{background:#f0ebf8;font-family:'Segoe UI',system-ui,sans-serif}
   </div>
 
   <div id="summaryView"></div>
-
   <div id="individualView" style="display:none">
     <div class="d-flex align-items-center gap-2 mb-3">
       <button class="btn btn-sm btn-outline-secondary" onclick="prevResp()"><i class="bi bi-chevron-left"></i></button>
@@ -61,22 +57,20 @@ body{background:#f0ebf8;font-family:'Segoe UI',system-ui,sans-serif}
     </div>
     <div id="respDetail"></div>
   </div>
-
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script>
 const COLORS = ['#673ab7','#e91e63','#2196f3','#4caf50','#ff9800','#00bcd4','#9c27b0','#f44336'];
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbxAa2dLS3FxLfgf1Uk30sLXBZMys_1BxBzCjLeo_OurUnTJVOQrjj4Wnfnm9FInrl38qQ/exec';
 
-const formId    = new URLSearchParams(location.search).get('id');
-const forms     = JSON.parse(localStorage.getItem('fb_forms') || '{}');
-const form      = formId ? forms[formId] : null;
-
+const formId  = new URLSearchParams(location.search).get('id');
+const forms   = JSON.parse(localStorage.getItem('fb_forms') || '{}');
+const form    = formId ? forms[formId] : null;
+let responses = [];
 let currentResp = 0;
-let responses   = [];
 
-// 更新連結
 if (formId) {
   document.getElementById('fillBtn').href  = `fill.html?id=${formId}`;
   document.getElementById('fillLink').href = `fill.html?id=${formId}`;
@@ -85,45 +79,25 @@ if (formId) {
 if (!form) {
   document.getElementById('noData').classList.remove('d-none');
 } else {
-  // 嘗試從 Google Sheets 讀取，fallback 到 localStorage
-  const gasUrl = 'https://script.google.com/macros/s/AKfycbxAa2dLS3FxLfgf1Uk30sLXBZMys_1BxBzCjLeo_OurUnTJVOQrjj4Wnfnm9FInrl38qQ/exec';
-  if (gasUrl) {
-    document.getElementById('titleCard').style.display = '';
-    document.getElementById('fTitle').textContent = form.title;
-    document.getElementById('fDesc').textContent  = form.description || '';
-    document.getElementById('totalCount').textContent = '載入中…';
-    fetch(`${gasUrl}?formId=${formId}`)
-      .then(r => r.json())
-      .then(data => {
-        responses = data.ok ? data.responses : [];
-        initView();
-      })
-      .catch(() => {
-        // GAS 失敗，用 localStorage
-        responses = JSON.parse(localStorage.getItem(`fb_responses_${formId}`) || '[]');
-        initView();
-      });
-  } else {
-    responses = JSON.parse(localStorage.getItem(`fb_responses_${formId}`) || '[]');
-    initView();
-  }
+  document.title = form.title + ' — 統計';
+  // 先顯示標題，再非同步載入資料
+  document.getElementById('fTitle').textContent = form.title;
+  document.getElementById('fDesc').textContent  = form.description || '';
+  document.getElementById('titleCard').style.display = '';
+  document.getElementById('totalCount').textContent = '載入中…';
+
+  fetch(`${GAS_URL}?formId=${formId}`)
+    .then(r => r.json())
+    .then(data => { responses = data.ok && data.responses.length ? data.responses : JSON.parse(localStorage.getItem(`fb_responses_${formId}`) || '[]'); initView(); })
+    .catch(() => { responses = JSON.parse(localStorage.getItem(`fb_responses_${formId}`) || '[]'); initView(); });
 }
 
 function initView() {
-  if (!responses.length) {
-    document.getElementById('noData').classList.remove('d-none');
-    document.getElementById('titleCard').style.display = 'none';
-    return;
-  }
-  document.getElementById('fTitle').textContent = form.title;
-  document.getElementById('fDesc').textContent  = form.description || '';
+  if (!responses.length) { document.getElementById('noData').classList.remove('d-none'); document.getElementById('totalCount').textContent = '0'; return; }
   document.getElementById('totalCount').textContent = responses.length;
-  document.getElementById('lastTime').textContent =
-    new Date(responses.at(-1).submittedAt).toLocaleString('zh-Hant');
-  document.getElementById('titleCard').style.display = '';
-  document.getElementById('tabBar').style.display    = '';
-  buildSummary();
-  buildIndividual(0);
+  document.getElementById('lastTime').textContent = new Date(responses.at(-1).submittedAt).toLocaleString('zh-Hant');
+  document.getElementById('tabBar').style.display = '';
+  buildSummary(); buildIndividual(0);
 }
 
 function buildSummary() {
@@ -132,36 +106,53 @@ function buildSummary() {
   (form.questions || []).forEach(q => {
     const card = document.createElement('div');
     card.className = 'card shadow-sm mb-3 q-stat-card';
-    const isChoice = ['radio','checkbox','dropdown'].includes(q.type);
+    const choiceTypes = ['radio','checkbox','dropdown','image_choice'];
     let bodyHtml = '';
 
-    if (isChoice) {
-      const counts = {};
-      (q.options||[]).forEach(o => counts[o] = 0);
+    if (choiceTypes.includes(q.type)) {
+      const opts = q.type === 'image_choice'
+        ? (q.options||[]).map(o => o.label || o)
+        : (q.options||[]);
+      const counts = {}; opts.forEach(o => counts[o] = 0);
       responses.forEach(r => (r.answers[String(q.id)]||[]).forEach(a => { if (a in counts) counts[a]++; }));
-      const labels = Object.keys(counts);
-      const data   = Object.values(counts);
-      const total  = data.reduce((a,b)=>a+b,0) || 1;
-      const cid    = `chart_${q.id}`;
-      bodyHtml = `
-        <div class="row align-items-center g-3">
-          <div class="col-md-4"><div class="chart-wrap"><canvas id="${cid}" height="180"></canvas></div></div>
-          <div class="col-md-8">${labels.map((l,i)=>`
-            <div class="d-flex align-items-center gap-2 mb-2">
-              <div style="width:12px;height:12px;border-radius:3px;background:${COLORS[i%COLORS.length]};flex-shrink:0"></div>
-              <span class="small flex-grow-1">${esc(l)}</span>
-              <div class="progress flex-grow-1" style="height:8px;min-width:60px">
-                <div class="progress-bar" style="width:${Math.round(data[i]/total*100)}%;background:${COLORS[i%COLORS.length]}"></div>
-              </div>
-              <span class="badge-count">${data[i]}</span>
-            </div>`).join('')}
-          </div>
-        </div>`;
+      const labels = Object.keys(counts), data = Object.values(counts);
+      const total = data.reduce((a,b)=>a+b,0) || 1;
+      const cid = `chart_${q.id}`;
+      bodyHtml = `<div class="row align-items-center g-3">
+        <div class="col-md-4"><div class="chart-wrap"><canvas id="${cid}" height="180"></canvas></div></div>
+        <div class="col-md-8">${labels.map((l,i)=>`
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <div style="width:12px;height:12px;border-radius:3px;background:${COLORS[i%COLORS.length]};flex-shrink:0"></div>
+            <span class="small flex-grow-1">${esc(l)}</span>
+            <div class="progress flex-grow-1" style="height:8px;min-width:60px">
+              <div class="progress-bar" style="width:${Math.round(data[i]/total*100)}%;background:${COLORS[i%COLORS.length]}"></div>
+            </div>
+            <span class="badge-count">${data[i]}</span>
+          </div>`).join('')}
+        </div></div>`;
       setTimeout(() => new Chart(document.getElementById(cid), {
         type: 'doughnut',
         data: { labels, datasets:[{ data, backgroundColor: COLORS.slice(0,labels.length), borderWidth:2 }] },
         options: { plugins:{ legend:{ display:false } }, cutout:'60%' },
       }), 0);
+
+    } else if (q.type === 'scale') {
+      const min = q.scale_min ?? 1, max = q.scale_max ?? 5;
+      const counts = {};
+      for (let v = min; v <= max; v++) counts[v] = 0;
+      responses.forEach(r => { const a = (r.answers[String(q.id)]||[])[0]; if (a && a in counts) counts[a]++; });
+      const total = Object.values(counts).reduce((a,b)=>a+b,0) || 1;
+      const avg = Object.entries(counts).reduce((s,[v,c])=>s+v*c,0) / total;
+      bodyHtml = `<p class="text-muted small mb-2">平均分數：<strong>${avg.toFixed(1)}</strong></p>` +
+        Object.entries(counts).map(([v,c])=>`
+          <div class="scale-bar-row">
+            <div class="scale-circle">${v}</div>
+            <div class="progress flex-grow-1" style="height:10px">
+              <div class="progress-bar" style="width:${Math.round(c/total*100)}%;background:var(--p)"></div>
+            </div>
+            <span class="badge-count">${c}</span>
+          </div>`).join('');
+
     } else {
       const answers = responses.map(r=>(r.answers[String(q.id)]||[])[0]).filter(a=>a?.trim());
       bodyHtml = answers.length
@@ -169,13 +160,11 @@ function buildSummary() {
         : `<p class="text-muted small mb-0">（尚無填答）</p>`;
     }
 
-    card.innerHTML = `
-      <div class="card-body p-3">
-        <div class="d-flex align-items-start justify-content-between mb-3">
-          <h6 class="fw-semibold mb-0">${esc(q.title)}</h6>
-          <span class="badge rounded-pill text-bg-light text-muted small">${typeLabel(q.type)}</span>
-        </div>${bodyHtml}
-      </div>`;
+    card.innerHTML = `<div class="card-body p-3">
+      <div class="d-flex align-items-start justify-content-between mb-3">
+        <h6 class="fw-semibold mb-0">${esc(q.title)}</h6>
+        <span class="badge rounded-pill text-bg-light text-muted small">${typeLabel(q.type)}</span>
+      </div>${bodyHtml}</div>`;
     wrap.appendChild(card);
   });
 }
@@ -209,11 +198,10 @@ function switchTab(tab, btn) {
 }
 
 function typeLabel(t) {
-  return {short_text:'單行',paragraph:'多行',radio:'單選',checkbox:'多選',dropdown:'下拉',date:'日期'}[t]||t;
+  return {short_text:'單行',paragraph:'多行',name:'姓名',email:'Email',radio:'單選',
+          checkbox:'多選',dropdown:'下拉',scale:'線性刻度',image_choice:'圖片選擇',date:'日期',time:'時間'}[t]||t;
 }
-function esc(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 </script>
 </body>
 </html>
