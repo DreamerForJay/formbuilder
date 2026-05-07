@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>填答表單</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<style>
+:root{--p:#673ab7}
+body{background:#f0ebf8;font-family:'Segoe UI',system-ui,sans-serif}
+.title-card{border-top:8px solid var(--p)!important;border-radius:8px!important}
+.q-card{border-radius:8px!important;border:1px solid #e0e0e0!important;transition:box-shadow .2s}
+.q-card:focus-within{box-shadow:0 4px 16px rgba(103,58,183,.15);border-color:#b39ddb!important}
+.req-star{color:#d32f2f;margin-left:3px}
+.submit-btn{background:var(--p);border:none;padding:10px 40px;font-size:1rem;border-radius:6px}
+.submit-btn:hover{background:#512da8}
+</style>
+</head>
+<body>
+<div class="container py-5" style="max-width:680px">
+
+  <div id="noForm" class="alert alert-warning d-none">
+    <i class="bi bi-exclamation-triangle"></i> 找不到表單，或表單尚未發佈。
+    <a href="dashboard.html" class="alert-link">前往管理後台</a>
+  </div>
+
+  <div id="formWrap" style="display:none">
+    <div class="card shadow-sm mb-3 title-card">
+      <div class="card-body p-4">
+        <h2 id="fTitle" class="mb-1 fw-bold"></h2>
+        <p id="fDesc" class="text-muted mb-0"></p>
+      </div>
+    </div>
+    <div id="qList"></div>
+    <div class="mt-3 d-flex gap-2 align-items-center">
+      <button class="btn text-white submit-btn" onclick="submitForm()">
+        <i class="bi bi-send"></i> 提交
+      </button>
+      <span id="errMsg" class="text-danger small"></span>
+    </div>
+  </div>
+
+  <div id="successCard" class="card shadow-sm text-center p-5" style="display:none">
+    <div class="mb-3" style="font-size:3rem">✅</div>
+    <h4 class="fw-bold mb-2">已成功提交！</h4>
+    <p class="text-muted mb-4">感謝您的填答。</p>
+    <div class="d-flex justify-content-center gap-2">
+      <button class="btn btn-outline-secondary btn-sm" onclick="location.reload()">再填一次</button>
+      <a id="resultsLink" href="results.html" class="btn btn-sm text-white" style="background:var(--p)">查看統計</a>
+    </div>
+  </div>
+
+</div>
+<script>
+const formId = new URLSearchParams(location.search).get('id');
+const forms  = JSON.parse(localStorage.getItem('fb_forms') || '{}');
+const form   = formId ? forms[formId] : null;
+
+if (!form || form.status !== 'published') {
+  document.getElementById('noForm').classList.remove('d-none');
+} else {
+  document.title = form.title;
+  document.getElementById('fTitle').textContent = form.title;
+  document.getElementById('fDesc').textContent  = form.description || '';
+  document.getElementById('formWrap').style.display = '';
+  document.getElementById('resultsLink').href = `results.html?id=${formId}`;
+
+  (form.questions || []).forEach(q => {
+    const card = document.createElement('div');
+    card.className = 'card shadow-sm mb-3 q-card';
+    card.dataset.qid  = q.id;
+    card.dataset.type = q.type;
+    card.dataset.req  = q.is_required ? '1' : '0';
+
+    const label = `<label class="fw-semibold mb-2 d-block">${esc(q.title)}${q.is_required?'<span class="req-star">*</span>':''}</label>`;
+    let input = '';
+
+    if (q.type === 'short_text') {
+      input = `<input type="text" class="form-control q-ans" placeholder="您的答案">`;
+    } else if (q.type === 'paragraph') {
+      input = `<textarea class="form-control q-ans" rows="3" placeholder="您的答案"></textarea>`;
+    } else if (q.type === 'date') {
+      input = `<input type="date" class="form-control q-ans" style="max-width:200px">`;
+    } else if (q.type === 'dropdown') {
+      input = `<select class="form-select q-ans"><option value="">— 請選擇 —</option>${
+        (q.options||[]).map(o=>`<option>${esc(o)}</option>`).join('')}</select>`;
+    } else {
+      const itype = q.type === 'checkbox' ? 'checkbox' : 'radio';
+      const name  = `q_${q.id}`;
+      input = (q.options||[]).map((o,i)=>`
+        <div class="form-check">
+          <input class="form-check-input q-ans" type="${itype}" name="${name}" value="${esc(o)}" id="${name}_${i}">
+          <label class="form-check-label" for="${name}_${i}">${esc(o)}</label>
+        </div>`).join('');
+    }
+
+    card.innerHTML = `<div class="card-body p-3">${label}${input}</div>`;
+    document.getElementById('qList').appendChild(card);
+  });
+}
+
+function submitForm() {
+  document.getElementById('errMsg').textContent = '';
+  let valid = true;
+  document.querySelectorAll('.q-card').forEach(card => {
+    card.style.borderColor = '';
+    if (card.dataset.req !== '1') return;
+    const type = card.dataset.type;
+    const answered = (type === 'radio' || type === 'checkbox')
+      ? !!card.querySelector('.q-ans:checked')
+      : !!(card.querySelector('.q-ans')?.value.trim());
+    if (!answered) { card.style.borderColor = '#d32f2f'; valid = false; }
+  });
+  if (!valid) {
+    document.getElementById('errMsg').textContent = '請填寫所有必填題目';
+    window.scrollTo({top:0,behavior:'smooth'});
+    return;
+  }
+
+  const answers = {};
+  document.querySelectorAll('.q-card').forEach(card => {
+    const qid  = card.dataset.qid;
+    const type = card.dataset.type;
+    if (type === 'checkbox') {
+      answers[qid] = [...card.querySelectorAll('.q-ans:checked')].map(x => x.value);
+    } else if (type === 'radio') {
+      const el = card.querySelector('.q-ans:checked');
+      answers[qid] = el ? [el.value] : [];
+    } else {
+      answers[qid] = [card.querySelector('.q-ans')?.value.trim() || ''];
+    }
+  });
+
+  const key  = `fb_responses_${formId}`;
+  const list = JSON.parse(localStorage.getItem(key) || '[]');
+  list.push({ submittedAt: new Date().toISOString(), answers });
+  localStorage.setItem(key, JSON.stringify(list));
+
+  document.getElementById('formWrap').style.display  = 'none';
+  document.getElementById('successCard').style.display = '';
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
