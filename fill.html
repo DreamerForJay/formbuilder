@@ -142,16 +142,14 @@ function submitForm() {
   list.push(entry);
   localStorage.setItem(key, JSON.stringify(list));
 
-  // 2. 同步到 Google Sheets
+  // 2. 同步到 Google Sheets（用 GET + 參數，避開 GAS POST 重導向問題）
   const gasUrl = GAS_URL || localStorage.getItem('fb_gas_url');
   if (gasUrl) {
     const btn = document.querySelector('.submit-btn');
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> 提交中…';
-    // GAS 需用 no-cors + form data 方式 POST（避免 CORS preflight 被擋）
-    const fd = new FormData();
-    fd.append('payload', JSON.stringify({ formId, form, answers }));
-    fetch(gasUrl, { method: 'POST', body: fd, mode: 'no-cors' })
+    const payload = encodeURIComponent(JSON.stringify({ formId, form, answers }));
+    fetch(`${gasUrl}?action=submit&payload=${payload}`)
     .catch(() => {})
     .finally(() => {
       document.getElementById('formWrap').style.display   = 'none';
