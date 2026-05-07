@@ -86,7 +86,7 @@ if (!form) {
   document.getElementById('noData').classList.remove('d-none');
 } else {
   // 嘗試從 Google Sheets 讀取，fallback 到 localStorage
-  const gasUrl = localStorage.getItem('fb_gas_url');
+  const gasUrl = 'https://script.google.com/macros/s/AKfycbxAa2dLS3FxLfgf1Uk30sLXBZMys_1BxBzCjLeo_OurUnTJVOQrjj4Wnfnm9FInrl38qQ/exec';
   if (gasUrl) {
     document.getElementById('titleCard').style.display = '';
     document.getElementById('fTitle').textContent = form.title;

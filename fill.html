@@ -53,9 +53,7 @@ body{background:#f0ebf8;font-family:'Segoe UI',system-ui,sans-serif}
 
 </div>
 <script>
-// ── 設定 Google Apps Script 部署 URL ─────────────────────
-// 部署 gas/Code.gs 後，將 URL 貼在這裡
-const GAS_URL = localStorage.getItem('fb_gas_url') || '';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbxAa2dLS3FxLfgf1Uk30sLXBZMys_1BxBzCjLeo_OurUnTJVOQrjj4Wnfnm9FInrl38qQ/exec';
 
 const formId = new URLSearchParams(location.search).get('id');
 const forms  = JSON.parse(localStorage.getItem('fb_forms') || '{}');
