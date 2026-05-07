@@ -138,7 +138,7 @@ function buildSummary() {
     if (isChoice) {
       const counts = {};
       (q.options||[]).forEach(o => counts[o] = 0);
-      responses.forEach(r => (r.answers[q.id]||[]).forEach(a => { if (a in counts) counts[a]++; }));
+      responses.forEach(r => (r.answers[String(q.id)]||[]).forEach(a => { if (a in counts) counts[a]++; }));
       const labels = Object.keys(counts);
       const data   = Object.values(counts);
       const total  = data.reduce((a,b)=>a+b,0) || 1;
@@ -163,7 +163,7 @@ function buildSummary() {
         options: { plugins:{ legend:{ display:false } }, cutout:'60%' },
       }), 0);
     } else {
-      const answers = responses.map(r=>(r.answers[q.id]||[])[0]).filter(a=>a?.trim());
+      const answers = responses.map(r=>(r.answers[String(q.id)]||[])[0]).filter(a=>a?.trim());
       bodyHtml = answers.length
         ? answers.map(a=>`<div class="text-ans-item">${esc(a)}</div>`).join('')
         : `<p class="text-muted small mb-0">（尚無填答）</p>`;
@@ -187,7 +187,7 @@ function buildIndividual(idx) {
   const wrap = document.getElementById('respDetail');
   wrap.innerHTML = `<p class="text-muted small mb-3"><i class="bi bi-clock"></i> 提交時間：${new Date(r.submittedAt).toLocaleString('zh-Hant')}</p>`;
   (form.questions||[]).forEach(q => {
-    const ans = (r.answers[q.id]||[]).filter(Boolean);
+    const ans = (r.answers[String(q.id)]||[]).filter(Boolean);
     const card = document.createElement('div');
     card.className = 'card shadow-sm mb-2 q-stat-card';
     card.innerHTML = `<div class="card-body p-3">
