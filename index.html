@@ -193,7 +193,9 @@ function renderBody(card, existingOpts) {
   addBtn.onclick = () => {
     const n = wrap.querySelectorAll('.opt-row').length + 1;
     appendOptRow(wrap, type, '', n);
-    wrap.querySelectorAll('.opt-row')[n-1]?.querySelector('.opt-input')?.focus();
+    // 聚焦最後一個新增的輸入框
+    const rows = wrap.querySelectorAll('.opt-row');
+    rows[rows.length - 1]?.querySelector('.opt-input')?.focus();
   };
   wrap.appendChild(addBtn);
   box.appendChild(wrap);
