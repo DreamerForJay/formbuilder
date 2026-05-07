@@ -53,6 +53,10 @@ body{background:#f0ebf8;font-family:'Segoe UI',system-ui,sans-serif}
 
 </div>
 <script>
+// ── 設定 Google Apps Script 部署 URL ─────────────────────
+// 部署 gas/Code.gs 後，將 URL 貼在這裡
+const GAS_URL = localStorage.getItem('fb_gas_url') || '';
+
 const formId = new URLSearchParams(location.search).get('id');
 const forms  = JSON.parse(localStorage.getItem('fb_forms') || '{}');
 const form   = formId ? forms[formId] : null;
@@ -132,12 +136,33 @@ function submitForm() {
     }
   });
 
+  const entry = { submittedAt: new Date().toISOString(), answers };
+
+  // 1. 存 localStorage（離線備份）
   const key  = `fb_responses_${formId}`;
   const list = JSON.parse(localStorage.getItem(key) || '[]');
-  list.push({ submittedAt: new Date().toISOString(), answers });
+  list.push(entry);
   localStorage.setItem(key, JSON.stringify(list));
 
-  document.getElementById('formWrap').style.display  = 'none';
+  // 2. 同步到 Google Sheets（若已設定 GAS_URL）
+  const gasUrl = GAS_URL || localStorage.getItem('fb_gas_url');
+  if (gasUrl) {
+    const btn = document.querySelector('.submit-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> 提交中…';
+    fetch(gasUrl, {
+      method: 'POST',
+      body: JSON.stringify({ formId, form, answers }),
+    })
+    .catch(() => {}) // 失敗不阻擋，localStorage 已有備份
+    .finally(() => {
+      document.getElementById('formWrap').style.display   = 'none';
+      document.getElementById('successCard').style.display = '';
+    });
+    return; // 等 fetch 完成後再顯示成功
+  }
+
+  document.getElementById('formWrap').style.display   = 'none';
   document.getElementById('successCard').style.display = '';
 }
 

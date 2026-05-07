@@ -72,9 +72,9 @@ const COLORS = ['#673ab7','#e91e63','#2196f3','#4caf50','#ff9800','#00bcd4','#9c
 const formId    = new URLSearchParams(location.search).get('id');
 const forms     = JSON.parse(localStorage.getItem('fb_forms') || '{}');
 const form      = formId ? forms[formId] : null;
-const responses = formId ? JSON.parse(localStorage.getItem(`fb_responses_${formId}`) || '[]') : [];
 
 let currentResp = 0;
+let responses   = [];
 
 // 更新連結
 if (formId) {
@@ -82,10 +82,39 @@ if (formId) {
   document.getElementById('fillLink').href = `fill.html?id=${formId}`;
 }
 
-if (!form || !responses.length) {
+if (!form) {
   document.getElementById('noData').classList.remove('d-none');
 } else {
-  document.title = form.title + ' — 統計';
+  // 嘗試從 Google Sheets 讀取，fallback 到 localStorage
+  const gasUrl = localStorage.getItem('fb_gas_url');
+  if (gasUrl) {
+    document.getElementById('titleCard').style.display = '';
+    document.getElementById('fTitle').textContent = form.title;
+    document.getElementById('fDesc').textContent  = form.description || '';
+    document.getElementById('totalCount').textContent = '載入中…';
+    fetch(`${gasUrl}?formId=${formId}`)
+      .then(r => r.json())
+      .then(data => {
+        responses = data.ok ? data.responses : [];
+        initView();
+      })
+      .catch(() => {
+        // GAS 失敗，用 localStorage
+        responses = JSON.parse(localStorage.getItem(`fb_responses_${formId}`) || '[]');
+        initView();
+      });
+  } else {
+    responses = JSON.parse(localStorage.getItem(`fb_responses_${formId}`) || '[]');
+    initView();
+  }
+}
+
+function initView() {
+  if (!responses.length) {
+    document.getElementById('noData').classList.remove('d-none');
+    document.getElementById('titleCard').style.display = 'none';
+    return;
+  }
   document.getElementById('fTitle').textContent = form.title;
   document.getElementById('fDesc').textContent  = form.description || '';
   document.getElementById('totalCount').textContent = responses.length;
