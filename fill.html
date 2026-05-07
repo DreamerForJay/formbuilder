@@ -142,22 +142,22 @@ function submitForm() {
   list.push(entry);
   localStorage.setItem(key, JSON.stringify(list));
 
-  // 2. 同步到 Google Sheets（若已設定 GAS_URL）
+  // 2. 同步到 Google Sheets
   const gasUrl = GAS_URL || localStorage.getItem('fb_gas_url');
   if (gasUrl) {
     const btn = document.querySelector('.submit-btn');
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> 提交中…';
-    fetch(gasUrl, {
-      method: 'POST',
-      body: JSON.stringify({ formId, form, answers }),
-    })
-    .catch(() => {}) // 失敗不阻擋，localStorage 已有備份
+    // GAS 需用 no-cors + form data 方式 POST（避免 CORS preflight 被擋）
+    const fd = new FormData();
+    fd.append('payload', JSON.stringify({ formId, form, answers }));
+    fetch(gasUrl, { method: 'POST', body: fd, mode: 'no-cors' })
+    .catch(() => {})
     .finally(() => {
       document.getElementById('formWrap').style.display   = 'none';
       document.getElementById('successCard').style.display = '';
     });
-    return; // 等 fetch 完成後再顯示成功
+    return;
   }
 
   document.getElementById('formWrap').style.display   = 'none';

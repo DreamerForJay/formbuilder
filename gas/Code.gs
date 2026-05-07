@@ -12,12 +12,20 @@
  * 5. 複製部署 URL，填入 fill.html 的 GAS_URL
  */
 
-const SHEET_ID = 'YOUR_GOOGLE_SHEET_ID'; // ← 替換成你的 Sheets ID
+const SHEET_ID = '1z8-bCp2YMP7YPRrUmv6YUcUoyMBPbMe5f7mBC1afGMY';
 
 // ── POST：接收填答，寫入 Sheets ──────────────────────────
 function doPost(e) {
   try {
-    const data = JSON.parse(e.postData.contents);
+    // 支援 JSON body 和 FormData 兩種格式
+    let data;
+    if (e.postData && e.postData.type === 'application/json') {
+      data = JSON.parse(e.postData.contents);
+    } else {
+      // FormData 方式（no-cors fetch）
+      const payload = e.parameter.payload || (e.postData && e.postData.contents);
+      data = JSON.parse(payload);
+    }
     const formId = data.formId;
     const form   = data.form;       // 表單結構（含 questions）
     const answers = data.answers;   // { questionId: [answer, ...] }
